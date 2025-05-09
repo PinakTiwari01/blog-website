@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spider-Verse Blog</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="background"></div>
+  <div class="container">
+    <h1 class="title">🕷️ Into the Blog-Verse</h1>
+    <p class="subtitle">Explore, Connect, and Swing into My World</p>
+
+    <div class="menu">
+      <a href="login.html" class="comic-button red">Login as Admin</a>
+      <a href="blog.html" class="comic-button blue">View Blog</a>
+      <a href="contact.html" class="comic-button yellow">Contact Me</a>
+    </div>
+  </div>
+
+  <canvas id="dots"></canvas>
+  <script>
+    // Optional: animated canvas glitch dots
+const canvas = document.getElementById("dots");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let i = 0; i < 150; i++) {
+    ctx.beginPath();
+    ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = i % 2 === 0 ? "#00f7ff" : "#ff004d";
+    ctx.fill();
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+
+  </script>
+</body>
+</html>

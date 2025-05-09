@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Portfolio Blog</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      margin: 0; padding: 0;
+    }
+    header {
+      background-color: #1f2937;
+      color: white;
+      padding: 1rem 2rem;
+      text-align: center;
+    }
+    main {
+      max-width: 900px;
+      margin: auto;
+      padding: 2rem;
+    }
+    .form-container, .search-container {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      padding: 0.6rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 0.5rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px,1fr));
+      gap: 1.5rem;
+    }
+    .post {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .post .content {
+      padding: 1rem;
+    }
+    .post h3 {
+      margin-top: 0;
+    }
+    .post-actions {
+      padding: 0 1rem 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>My Portfolio Blog</h1>
+  </header>
+
+  <main>
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="Search blog by title...">
+    </div>
+
+    <div class="form-container">
+      <input type="text" id="title" placeholder="Blog Title" />
+      <textarea id="content" placeholder="Write your post..."></textarea>
+      <button id="postBtn">Post</button>
+    </div>
+
+    <div class="grid" id="blogContainer">
+      <!-- Posts will appear here -->
+    </div>
+  </main>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDkPwgygH3KJnUCS9-Pt8SQUeG-wZM-4As",
+      authDomain: "blog-website-e51eb.firebaseapp.com",
+      databaseURL: "https://blog-website-e51eb-default-rtdb.firebaseio.com",
+      projectId: "blog-website-e51eb",
+      storageBucket: "blog-website-e51eb.appspot.com",
+      messagingSenderId: "661881083197",
+      appId: "1:661881083197:web:ade2b3a6f2bf486ab5a154"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const titleInput = document.getElementById('title');
+    const contentInput = document.getElementById('content');
+    const postBtn = document.getElementById('postBtn');
+    const blogContainer = document.getElementById('blogContainer');
+    const searchInput = document.getElementById('searchInput');
+
+    let allPosts = {};
+
+    postBtn.addEventListener('click', () => {
+      const title = titleInput.value.trim();
+      const content = contentInput.value.trim();
+      if (!title || !content) {
+        alert('Please fill out both title and content.');
+        return;
+      }
+
+      const newPostRef = db.ref('posts').push();
+      newPostRef.set({
+        title,
+        content,
+        timestamp: Date.now()
+      }).then(() => {
+        titleInput.value = '';
+        contentInput.value = '';
+      });
+    });
+
+    function addPostToUI(postId, { title, content }) {
+      const postEl = document.createElement('div');
+      postEl.className = 'post';
+      postEl.dataset.id = postId;
+
+      postEl.innerHTML = `
+        <div class="content">
+          <h3>${title}</h3>
+          <p>${content}</p>
+        </div>
+        <div class="post-actions">
+          <button onclick="editPost('${postId}')">Edit</button>
+          <button onclick="deletePost('${postId}')">Delete</button>
+        </div>
+      `;
+      blogContainer.prepend(postEl);
+    }
+
+    function editPost(id) {
+      const post = allPosts[id];
+      const newTitle = prompt("Edit Title:", post.title);
+      const newContent = prompt("Edit Content:", post.content);
+      if (newTitle && newContent) {
+        db.ref('posts/' + id).update({
+          title: newTitle,
+          content: newContent
+        });
+      }
+    }
+
+    function deletePost(id) {
+      if (confirm("Are you sure you want to delete this post?")) {
+        db.ref('posts/' + id).remove();
+        document.querySelector(`.post[data-id="${id}"]`).remove();
+        delete allPosts[id];
+      }
+    }
+
+    const postsRef = db.ref('posts').orderByChild('timestamp');
+    postsRef.on('child_added', snapshot => {
+      allPosts[snapshot.key] = snapshot.val();
+      addPostToUI(snapshot.key, snapshot.val());
+    });
+
+    postsRef.on('child_changed', snapshot => {
+      allPosts[snapshot.key] = snapshot.val();
+      const existing = document.querySelector(`.post[data-id="${snapshot.key}"]`);
+      if (existing) existing.remove();
+      addPostToUI(snapshot.key, snapshot.val());
+    });
+
+    postsRef.on('child_removed', snapshot => {
+      const postEl = document.querySelector(`.post[data-id="${snapshot.key}"]`);
+      if (postEl) postEl.remove();
+    });
+
+    searchInput.addEventListener('input', () => {
+      const filter = searchInput.value.toLowerCase();
+      blogContainer.innerHTML = '';
+      Object.entries(allPosts).forEach(([id, post]) => {
+        if (post.title.toLowerCase().includes(filter)) {
+          addPostToUI(id, post);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

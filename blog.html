@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Blog</title>
+  <style>
+    body {
+      font-family: 'Bangers', sans-serif; /* Comic-style font */
+      padding: 2rem;
+      background: #0a0a0a; /* Dark background for a comic-book feel */
+      color: #fff;
+      margin: 0;
+      font-size: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      font-family: 'Komika Axis', sans-serif;
+      font-size: 3rem;
+      color: #f50057; /* Vibrant red for the heading */
+      text-transform: uppercase;
+      text-shadow: 2px 2px 5px rgba(255, 0, 0, 0.7), 0 0 25px #ff4c4c;
+      animation: glitch 1.5s infinite;
+    }
+
+    input {
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      width: 100%;
+      max-width: 400px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 2px solid #ff4c4c;
+      background: transparent;
+      color: white;
+      outline: none;
+      box-shadow: 0 0 5px rgba(255, 76, 76, 0.7);
+      animation: pop 1s ease-in-out infinite alternate;
+    }
+
+    input:focus {
+      border-color: #f50057;
+    }
+
+    .post {
+      background: #222;
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+      position: relative;
+      overflow: hidden;
+      animation: slideIn 1s ease-in-out;
+    }
+
+    .post h2 {
+      margin: 0 0 0.5rem;
+      font-size: 2rem;
+      color: #ff4c4c;
+      font-family: 'Bangers', sans-serif;
+      text-shadow: 2px 2px 5px rgba(255, 0, 0, 0.7);
+      position: relative;
+      animation: glitch 1s infinite;
+    }
+
+    .post p {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.6;
+      font-family: 'Arial', sans-serif;
+      color: #bbb;
+      animation: fadeIn 2s ease-out;
+    }
+
+    /* Animations */
+    @keyframes glitch {
+      0% {
+        text-shadow: 2px 2px 5px rgba(255, 0, 0, 0.7), 0 0 10px #ff4c4c;
+        transform: translateX(0);
+      }
+      20% {
+        text-shadow: 10px 10px 5px rgba(0, 255, 0, 0.5), -5px -5px 5px rgba(0, 0, 255, 0.5);
+        transform: translateX(-5px);
+      }
+      40% {
+        text-shadow: -5px -5px 5px rgba(255, 0, 0, 0.7), 5px 5px 10px #ff4c4c;
+        transform: translateX(5px);
+      }
+      60% {
+        text-shadow: 2px 2px 5px rgba(255, 0, 0, 0.7), 0 0 10px #ff4c4c;
+        transform: translateX(0);
+      }
+      100% {
+        text-shadow: 10px 10px 5px rgba(0, 255, 0, 0.5), -5px -5px 5px rgba(0, 0, 255, 0.5);
+        transform: translateX(5px);
+      }
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(1);
+        border-color: #ff4c4c;
+      }
+      100% {
+        transform: scale(1.05);
+        border-color: #f50057;
+      }
+    }
+
+    @keyframes slideIn {
+      0% {
+        transform: translateY(50px);
+        opacity: 0;
+      }
+      100% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeIn {
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+
+    #blogContainer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+      width: 100%;
+      max-width: 1200px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Blog Posts</h1>
+  <input
+    type="text"
+    id="searchInput"
+    placeholder="Search blog by title..."
+    oninput="filterPosts()"
+  />
+  <div id="blogContainer">Loading...</div>
+
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <script>
+    // 1) Your Firebase config (same as upload page)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDkPwgygH3KJnUCS9-Pt8SQUeG-wZM-4As",
+      authDomain: "blog-website-e51eb.firebaseapp.com",
+      databaseURL: "https://blog-website-e51eb-default-rtdb.firebaseio.com",
+      projectId: "blog-website-e51eb",
+      storageBucket: "blog-website-e51eb.appspot.com",
+      messagingSenderId: "661881083197",
+      appId: "1:661881083197:web:ade2b3a6f2bf486ab5a154"
+    };
+
+    // 2) Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 3) State
+    let allPosts = [];
+
+    // 4) Load & listen for new posts
+    const postsRef = db.ref('posts').orderByChild('timestamp');
+    postsRef.on('value', snapshot => {
+      const postsObj = snapshot.val() || {};
+      // convert object to sorted array (newest first)
+      allPosts = Object
+        .entries(postsObj)
+        .map(([id, post]) => ({ id, ...post }))
+        .sort((a, b) => b.timestamp - a.timestamp);
+
+      displayPosts(allPosts);
+    });
+
+    // 5) Render posts into DOM
+    function displayPosts(posts) {
+      const container = document.getElementById('blogContainer');
+      if (!posts.length) {
+        container.innerHTML = '<p>No blog posts found.</p>';
+        return;
+      }
+
+      container.innerHTML = posts.map(post => `
+        <div class="post">
+          <h2>${escapeHtml(post.title)}</h2>
+          <p>${escapeHtml(post.content)}</p>
+        </div>
+      `).join('');
+    }
+
+    // 6) Filter by title
+    function filterPosts() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = allPosts.filter(p =>
+        p.title.toLowerCase().includes(q)
+      );
+      displayPosts(filtered);
+    }
+
+    // 7) Simple HTML-escape to avoid markup injection
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
